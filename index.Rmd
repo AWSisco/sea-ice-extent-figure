@@ -72,8 +72,8 @@ The `ggplot2` package allows fine-tuned control of all plot elements, such as co
 
 ```{r, fig.width=8.5, fig.height=5}
 pLine <- ggplot(data = data, aes(x = year, y = extent_sqmi)) +
-  geom_line(color = "#1E78B4", size = 1) +
-  geom_point(color = "#1E78B4", size = 3) +
+  geom_line(color = "#1E78B4", size = 0.75) +
+  geom_point(color = "#1E78B4", size = 2.5) +
   scale_y_continuous(limits = c(0,3.5),
                      expand = c(0,0),
                      breaks = seq(0, 3.5, 0.5)) +
