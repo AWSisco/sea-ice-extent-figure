@@ -1,0 +1,198 @@
+---
+title: "Recreating a USGCRP Sea Ice Extent Figure with R"
+author: "*[Adam Sisco](https://awsisco.github.io/) and Kane Cook*"
+date: "`r format(Sys.Date(), '%B %d, %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    number_sections: true
+    code_folding: "show"
+    css: style.css
+---
+
+```{r, setup, include=FALSE}
+knitr::opts_chunk$set(dev='svg', collapse = TRUE)
+```
+
+# Overview {.tabset .tabset-fade}
+
+This document details the methods used to recreate the figure that accompanies the USGCRP [Arctic Sea Ice Extent idicator](https://www.globalchange.gov/browse/indicators/indicator-arctic-sea-ice-extent). The time series plot is derived from a CSV file of September Arctic sea ice extent values. The polar stereographic maps depict the geographic extent of sea ice for September 1979 and 2018. The spatial extents are extracted from shapefiles that contain polygon geometries.
+
+## Primary Data {-}
+
+<img style="padding-right: 15px;" src="./images/noaaLogo.png" width="75px">[**Sea Ice Index, Version 3**](https://doi.org/10.7265/N5K072F8)
+
+<br/>
+Fetterer, F., K. Knowles, W. N. Meier, M. Savoie, and A. K. Windnagel. 2017, updated daily. Sea Ice Index, Version 3. Boulder, Colorado USA. NSIDC: National Snow and Ice Data Center. doi: https://doi.org/10.7265/N5K072F8.
+
+***
+
+## Ancillary Data {-}
+With the help of the `rnaturalearth` package, 1:50m land and coastline vector layers are used in depicting the geographic extent of Arctic sea ice. See the links below for more information.
+
+[Natural Earth 1:50m Land](https://www.naturalearthdata.com/downloads/50m-physical-vectors/50m-land/)
+
+[Natural Earth 1:50m Coastline](https://www.naturalearthdata.com/downloads/50m-physical-vectors/50m-coastline/)
+
+***
+
+## Tools and Packages {-}
+
+All data manipulation and plotting is done using R and four packages: [sf](https://github.com/r-spatial/sf), [ggplot2](https://ggplot2.tidyverse.org/), [rnaturalearth](https://cran.r-project.org/web/packages/rnaturalearth/), and [ggpubr](https://rpkgs.datanovia.com/ggpubr/).
+
+```{r, message = FALSE, warning = FALSE}
+library(sf)
+library(ggplot2)
+library(rnaturalearth)
+library(cowplot)
+```
+
+***
+
+# Line Plot
+
+## Read CSV
+The Semptember Arctic sea ice extent time series is accessed in CSV format directly via an FTP archive using the `read.csv()` function.
+
+```{r paged.print=TRUE}
+data <- read.csv("ftp://sidads.colorado.edu/DATASETS/NOAA/G02135/north/monthly/data/N_09_extent_v3.0.csv")
+head(data)
+```
+
+## Convert Units
+The extent values are converted from millions of square kilometers (x10^6^ km^2^) to millions of square miles (x10^6^ mi^2^). The result is rounded to 2 digits.
+
+```{r}
+data$extent_sqmi <- round(data$extent*0.386, digits = 2)
+```
+
+## Create Line Plot
+The `ggplot2` package allows fine-tuned control of all plot elements, such as colors, axis breaks, and axis titles.
+
+```{r, fig.width=8.5, fig.height=5}
+pLine <- ggplot(data = data, aes(x = year, y = extent_sqmi)) +
+  geom_line(color = "#1E78B4", size = 1) +
+  geom_point(color = "#1E78B4", size = 3) +
+  scale_y_continuous(limits = c(0,3.5),
+                     expand = c(0,0),
+                     breaks = seq(0, 3.5, 0.5)) +
+  scale_x_continuous(limits = c(1975, 2022),
+                     expand = c(0,0),
+                     breaks = seq(1975, 2020, 5)) +
+  labs(y = "Extent\n[million square miles]",
+       title = "Average September Artic Sea Ice Exent") +
+  theme(axis.title.x = element_blank(),
+        panel.grid = element_blank(),
+        panel.background = element_blank(),
+        axis.line = element_line(),
+        plot.title = element_text(hjust = 0.5, size = 16))
+
+pLine
+```
+
+***
+
+# Polar Stereographic Maps
+
+## Retrieve Data
+First, the two ancillary Natural Earth layers are imported using the `ne_download()` function from the `rnaturalearth` package.
+
+```{r, results="hide"}
+land <- ne_download(scale = "medium", type = "land", category = "physical", returnclass = "sf")
+coast <- ne_download(scale = "medium", type = "coastline", category = "physical", returnclass = "sf")
+```
+
+Polygon geometries of September 1979 and 2018 sea ice extent are downloaded from the Sea Ice Index [FTP archive](ftp://sidads.colorado.edu/DATASETS/NOAA/G02135/north/monthly/shapefiles/shp_extent/09_Sep/) and read using the `st_read` function.
+
+```{r, results="hide"}
+ice79 <- st_read("./data/extent_N_197909_polygon_v3.0.shp")
+ice18 <- st_read("./data/extent_N_201809_polygon_v3.0.shp")
+```
+
+## Transform Data
+Several steps are needed to prepare the ice, land, and coast layers for mapping:
+
+1. Extract the native projection from the ice layer and modify the longitude of projection center
+2. Crop the layers to include only geometries north on 20 degrees north latitude
+3. Reproject all layers to the new custom projection
+4. Create a layer to represent the visible extent of the forthcoming maps (everything north of 50 degrees north latitude)
+5. Clip the ice, land, and coast layers to the visible area of interest
+
+```{r}
+#[1] Extract the proj4string from the ice79 layer and change the longitude of projection center to -110
+nsidc_proj <- st_crs(ice79)[[2]]
+nsidc_proj
+```
+
+```{r}
+nsidc_proj <- gsub("lon_0=-45", "lon_0=-110", nsidc_proj)
+```
+
+```{r, message=FALSE, warning=FALSE}
+#[2-3] Crop the land and coasts at 20N latitiude; reproject ice, land, and coasts to nsidc_proj
+land %>% st_crop(xmin = -180, xmax= 180, ymin = 20, ymax = 90) %>% st_transform(crs = nsidc_proj) -> land2 
+coast %>% st_crop(xmin = -180, xmax= 180, ymin = 20, ymax = 90) %>% st_transform(crs = nsidc_proj) -> coast2
+ice79 <- st_transform(ice79, crs = nsidc_proj)
+ice18 <- st_transform(ice18, crs = nsidc_proj)
+
+#[4] Draw a line from the North Pole to 50N and get the nsidc_proj length of that line
+line_coords <- matrix(c(0,90,0,50), ncol=2, byrow=TRUE)
+st_linestring(line_coords) %>% st_sfc(crs = 4326) %>% st_transform(crs = nsidc_proj)-> line
+radius <- as.numeric(st_length(line))
+
+#[4 continued] Create a cicle using the radius that captures everything north of 50N
+st_point(x = c(0,0)) %>% st_buffer(dist = radius) %>% st_sfc(crs = nsidc_proj) -> circle
+
+#[5] Clip the ice, land, and coast layers to the circle
+land3 <- st_intersection(land2, circle)
+coast3 <- st_intersection(coast2, circle)
+ice79 <- st_intersection(ice79, circle)
+ice18 <- st_intersection(ice18, circle)
+```
+
+## Create Maps
+
+A function named `plot_sea_ice` is witten to draw the circle, land, coast, ice, and cicle border in that order. The two years are then arranged side by side for comparison.
+
+```{r, fig.width=8.5, fig.height=4}
+
+plot_sea_ice <- function(x, year, value, label_size, line_width){
+  p <- ggplot() + geom_sf(data = circle, fill = "#A6CEE3", color = NA) +
+    geom_sf(data = land3, fill = "#B2DF8A", color = NA) +
+    geom_sf(data = coast3, size = line_width) +
+    geom_sf(data = x, fill = "white", size = line_width) +
+    geom_sf(data = circle, fill = NA, size = line_width) +
+    coord_sf(datum = NA, clip = "off") +
+    theme(panel.background = element_blank(),
+          axis.title = element_blank(),
+          plot.margin = margin(r=2.5, unit = "cm")) +
+    scale_x_continuous(expand = c(0,0)) +
+    scale_y_continuous(expand = c(0,0)) +
+    annotate("text", x = radius, y = -radius,
+             label = paste0(year, "\n", value, " million\nsquare miles"),
+             hjust = 0, vjust = 0, size = label_size)
+  
+  return(p)
+}
+
+p79 <- plot_sea_ice(ice79, "1979", data$extent_sqmi[1], 4, line_width = 0.25)
+p18 <- plot_sea_ice(ice18, "2018", tail(data$extent_sqmi, n = 1), 4, line_width = 0.25)
+
+plot_grid(p79, p18)
+```
+
+***
+
+# Final Summary Plot
+
+The maps can be placed alongside the time series plot to create the comprehensive summary graphic.
+
+```{r, fig.width=9, fig.height = 4.5}
+p79 <- plot_sea_ice(ice79, "1979", data$extent_sqmi[1], 3, line_width = 0.25)
+p18 <- plot_sea_ice(ice18, "2018", tail(data$extent_sqmi, n = 1), 3, line_width = 0.25)
+
+maps <- plot_grid(p79, p18, nrow = 2)
+
+plot_grid(pLine, maps, rel_widths = c(2.5,1))
+```
