@@ -50,7 +50,7 @@ library(cowplot)
 
 ***
 
-# Line Plot
+# Line Graph
 
 ## Read CSV
 The Semptember Arctic sea ice extent time series is accessed in CSV format directly via an FTP archive using the `read.csv()` function.
@@ -67,7 +67,7 @@ The extent values are converted from millions of square kilometers (x10^6^ km^2^
 data$extent_sqmi <- round(data$extent*0.386, digits = 2)
 ```
 
-## Create Line Plot
+## Create Line Graph
 The `ggplot2` package allows fine-tuned control of all plot elements, such as colors, axis breaks, and axis titles.
 
 ```{r, fig.width=8.5, fig.height=5}
@@ -82,11 +82,9 @@ pLine <- ggplot(data = data, aes(x = year, y = extent_sqmi)) +
                      breaks = seq(1975, 2020, 5)) +
   labs(y = "Extent\n[million square miles]",
        title = "Average September Artic Sea Ice Exent") +
+  theme_half_open(font_size = 12) +
   theme(axis.title.x = element_blank(),
-        panel.grid = element_blank(),
-        panel.background = element_blank(),
-        axis.line = element_line(),
-        plot.title = element_text(hjust = 0.5, size = 16))
+        plot.title = element_text(hjust = 0.5, face = "plain"))
 
 pLine
 ```
