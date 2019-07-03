@@ -17,29 +17,29 @@ knitr::opts_chunk$set(dev='svg', collapse = TRUE)
 
 # Overview {.tabset .tabset-fade}
 
-This document details the methods used to recreate the figure that accompanies the USGCRP [Arctic Sea Ice Extent idicator](https://www.globalchange.gov/browse/indicators/indicator-arctic-sea-ice-extent). The time series plot is derived from a CSV file of September Arctic sea ice extent values. The polar stereographic maps depict the geographic extent of sea ice for September 1979 and 2018. The spatial extents are extracted from shapefiles that contain polygon geometries.
+This document details the methods used to recreate the figure that accompanies the USGCRP [Arctic Sea Ice Extent idicator](https://www.globalchange.gov/browse/indicators/indicator-arctic-sea-ice-extent){target="_blank"}. The time series plot is derived from a CSV file of September Arctic sea ice extent values. The polar stereographic maps depict the geographic extent of sea ice for September 1979 and 2018. The spatial extents are extracted from shapefiles that contain polygon geometries.
 
 ## Primary Data {-}
 
-<img style="padding-right: 15px;" src="./images/noaaLogo.png" width="75px">[**Sea Ice Index, Version 3**](https://doi.org/10.7265/N5K072F8)
+<img style="padding-right: 15px;" src="./images/noaaLogo.png" width="75px">[**Sea Ice Index, Version 3**](https://doi.org/10.7265/N5K072F8){target="_blank"}
 
 <br/>
-Fetterer, F., K. Knowles, W. N. Meier, M. Savoie, and A. K. Windnagel. 2017, updated daily. Sea Ice Index, Version 3. Boulder, Colorado USA. NSIDC: National Snow and Ice Data Center. doi: https://doi.org/10.7265/N5K072F8.
+Fetterer, F., K. Knowles, W. N. Meier, M. Savoie, and A. K. Windnagel. 2017, updated daily. Sea Ice Index, Version 3. Boulder, Colorado USA. NSIDC: National Snow and Ice Data Center. doi: [https://doi.org/10.7265/N5K072F8](https://doi.org/10.7265/N5K072F8){target="_blank"}.
 
 ***
 
 ## Ancillary Data {-}
 With the help of the `rnaturalearth` package, 1:50m land and coastline vector layers are used in depicting the geographic extent of Arctic sea ice. See the links below for more information.
 
-[Natural Earth 1:50m Land](https://www.naturalearthdata.com/downloads/50m-physical-vectors/50m-land/)
+[Natural Earth 1:50m Land](https://www.naturalearthdata.com/downloads/50m-physical-vectors/50m-land/){target="_blank"}
 
-[Natural Earth 1:50m Coastline](https://www.naturalearthdata.com/downloads/50m-physical-vectors/50m-coastline/)
+[Natural Earth 1:50m Coastline](https://www.naturalearthdata.com/downloads/50m-physical-vectors/50m-coastline/){target="_blank"}
 
 ***
 
 ## Tools and Packages {-}
 
-All data manipulation and plotting is done using R and four packages: [sf](https://github.com/r-spatial/sf), [ggplot2](https://ggplot2.tidyverse.org/), [rnaturalearth](https://cran.r-project.org/web/packages/rnaturalearth/), and [ggpubr](https://rpkgs.datanovia.com/ggpubr/).
+All data manipulation and plotting is done using R and four packages: [sf](https://github.com/r-spatial/sf){target="_blank"}, [ggplot2](https://github.com/tidyverse/ggplot2){target="_blank"}, [rnaturalearth](https://github.com/ropensci/rnaturalearth){target="_blank"}, and [cowplot](https://github.com/wilkelab/cowplot){target="_blank"}.
 
 ```{r, message = FALSE, warning = FALSE}
 library(sf)
@@ -103,7 +103,7 @@ land <- ne_download(scale = "medium", type = "land", category = "physical", retu
 coast <- ne_download(scale = "medium", type = "coastline", category = "physical", returnclass = "sf")
 ```
 
-Polygon geometries of September 1979 and 2018 sea ice extent are downloaded from the Sea Ice Index [FTP archive](ftp://sidads.colorado.edu/DATASETS/NOAA/G02135/north/monthly/shapefiles/shp_extent/09_Sep/) and read using the `st_read` function.
+Polygon geometries of September 1979 and 2018 sea ice extent are downloaded from the Sea Ice Index [FTP archive](ftp://sidads.colorado.edu/DATASETS/NOAA/G02135/north/monthly/shapefiles/shp_extent/09_Sep/){target="_blank"} and read using the `st_read` function.
 
 ```{r, results="hide"}
 ice79 <- st_read("./data/extent_N_197909_polygon_v3.0.shp")
